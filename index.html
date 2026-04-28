@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Produto Cartesiano - A×B, A² e B²</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 3px;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 18px;
+            font-size: 13px;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .canvas-section {
+            flex: 1;
+            min-width: 520px;
+            position: relative;
+        }
+
+        .info-section {
+            flex: 0 0 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: #fafafa;
+            display: block;
+            width: 100%;
+            height: auto;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        .canvas-hint {
+            text-align: center;
+            color: #888;
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
+        /* Seletor de modo */
+        .mode-selector {
+            display: flex;
+            gap: 5px;
+            background: #f0f0f0;
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 10px 8px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: all 0.3s;
+            background: transparent;
+            color: #666;
+            white-space: nowrap;
+        }
+
+        .mode-btn.active {
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .mode-btn.mode-ab { color: #667eea; }
+        .mode-btn.mode-ab.active { background: #667eea; color: white; }
+        .mode-btn.mode-a2 { color: #e91e63; }
+        .mode-btn.mode-a2.active { background: #e91e63; color: white; }
+        .mode-btn.mode-b2 { color: #ff9800; }
+        .mode-btn.mode-b2.active { background: #ff9800; color: white; }
+
+        .mode-legend {
+            font-size: 11px;
+            color: #888;
+            text-align: center;
+            margin-top: 2px;
+        }
+
+        .given-set-box {
+            background: #f0f4ff;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .given-set-box h3 {
+            color: #333;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+
+        .set-display {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            text-align: center;
+            color: #333;
+            letter-spacing: 0.5px;
+            line-height: 1.5;
+        }
+
+        .progress-container {
+            display: flex;
+            gap: 8px;
+        }
+
+        .progress-box {
+            flex: 1;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .progress-box.complete {
+            animation: glow 1.5s infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(76, 175, 80, 0.3); }
+            50% { box-shadow: 0 0 15px rgba(76, 175, 80, 0.5); }
+        }
+
+        .progress-ab {
+            background: #e8eaf6;
+            border: 2px solid #667eea;
+        }
+        .progress-ab.complete {
+            background: #c5cae9;
+        }
+
+        .progress-a2 {
+            background: #fce4ec;
+            border: 2px solid #e91e63;
+        }
+        .progress-a2.complete {
+            background: #f8bbd0;
+        }
+
+        .progress-b2 {
+            background: #fff3e0;
+            border: 2px solid #ff9800;
+        }
+        .progress-b2.complete {
+            background: #ffe0b2;
+        }
+
+        .progress-label {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .progress-count {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 3px 0;
+        }
+
+        .pairs-list {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            max-height: 130px;
+            overflow-y: auto;
+        }
+
+        .pairs-list h3 {
+            margin-bottom: 6px;
+            color: #333;
+            font-size: 13px;
+        }
+
+        .pairs-section {
+            margin-bottom: 8px;
+        }
+
+        .pairs-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .pairs-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pairs-section-title .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        .pairs-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .pair-tag {
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+        }
+
+        .pair-tag.ab { background: #667eea; }
+        .pair-tag.a2 { background: #e91e63; }
+        .pair-tag.b2 { background: #ff9800; }
+
+        .empty-message {
+            color: #bbb;
+            font-size: 11px;
+            font-style: italic;
+        }
+
+        .question-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .question-box h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .question-item {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+
+        .question-item.correct {
+            border-color: #4caf50;
+            background: #f1f8e9;
+        }
+
+        .question-item.wrong {
+            border-color: #f44336;
+            background: #fef2f2;
+        }
+
+        .question-item.locked {
+            opacity: 0.6;
+        }
+
+        .question-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+
+        .answer-input {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .answer-input input {
+            flex: 1;
+            min-width: 100px;
+            padding: 7px 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            transition: border-color 0.3s;
+        }
+
+        .answer-input input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .answer-input input.correct-input {
+            border-color: #4caf50 !important;
+            background: #f1f8e9;
+        }
+
+        .answer-input input.wrong-input {
+            border-color: #f44336 !important;
+            background: #fef2f2;
+        }
+
+        .answer-input input:disabled {
+            background: #f5f5f5;
+            color: #aaa;
+        }
+
+        .btn-verify {
+            padding: 7px 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 11px;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .btn-verify:hover {
+            background: #5a6fd6;
+        }
+
+        .btn-verify:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-show-answer {
+            padding: 7px 10px;
+            background: #ff9800;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 11px;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .btn-show-answer:hover {
+            background: #f57c00;
+        }
+
+        .feedback-text {
+            font-size: 11px;
+            margin-top: 4px;
+            font-weight: 600;
+            min-height: 16px;
+        }
+
+        .feedback-text.correct { color: #4caf50; }
+        .feedback-text.wrong { color: #f44336; }
+
+        .locked-message {
+            color: #f44336;
+            font-size: 10px;
+            font-style: italic;
+            margin-top: 2px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .btn-reset {
+            flex: 1;
+            padding: 9px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: all 0.3s;
+            min-width: 80px;
+        }
+
+        .btn-reset:hover {
+            background: #d32f2f;
+            transform: translateY(-2px);
+        }
+
+        .btn-undo {
+            flex: 1;
+            padding: 9px;
+            background: #795548;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: all 0.3s;
+            min-width: 80px;
+        }
+
+        .btn-undo:hover {
+            background: #5d4037;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 950px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .canvas-section {
+                min-width: 100%;
+            }
+            
+            .info-section {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <span>📐</span> Produto Cartesiano: A×B, A² e B²
+            <span>📐</span>
+        </h1>
+        <p class="subtitle">Selecione o modo • Clique nas interseções da grade • Descubra os conjuntos</p>
+
+        <div class="main-content">
+            <!-- Canvas Section -->
+            <div class="canvas-section">
+                <canvas id="cartesianCanvas" width="550" height="550"></canvas>
+                <div class="canvas-hint" id="canvasHint">🖱️ Clique nas interseções para marcar os pares ordenados</div>
+            </div>
+
+            <!-- Info Section -->
+            <div class="info-section">
+                <!-- Conjunto dado -->
+                <div class="given-set-box">
+                    <h3>📋 Conjunto Dado:</h3>
+                    <div class="set-display">
+                        A × B = {(1,5), (1,7), (1,9), (2,5), (2,7), (2,9)}
+                    </div>
+                </div>
+
+                <!-- Seletor de Modo -->
+                <div class="mode-selector">
+                    <button class="mode-btn mode-ab active" id="modeAB" onclick="setMode('AB')">
+                        🔵 A × B
+                    </button>
+                    <button class="mode-btn mode-a2" id="modeA2" onclick="setMode('A2')">
+                        🔴 A²
+                    </button>
+                    <button class="mode-btn mode-b2" id="modeB2" onclick="setMode('B2')">
+                        🟠 B²
+                    </button>
+                </div>
+                <div class="mode-legend">
+                    Clique para alternar o conjunto que está marcando
+                </div>
+
+                <!-- Progresso -->
+                <div class="progress-container">
+                    <div class="progress-box progress-ab" id="progressAB">
+                        <div class="progress-label">A × B</div>
+                        <div class="progress-count">0/6</div>
+                    </div>
+                    <div class="progress-box progress-a2" id="progressA2">
+                        <div class="progress-label">A²</div>
+                        <div class="progress-count">0/4</div>
+                    </div>
+                    <div class="progress-box progress-b2" id="progressB2">
+                        <div class="progress-label">B²</div>
+                        <div class="progress-count">0/9</div>
+                    </div>
+                </div>
+
+                <!-- Pares localizados -->
+                <div class="pairs-list" id="pairsList">
+                    <h3>📍 Pares Localizados:</h3>
+                    <div class="pairs-section" id="sectionAB">
+                        <div class="pairs-section-title">
+                            <span class="dot" style="background:#667eea;"></span> A × B
+                        </div>
+                        <div class="pairs-grid" id="placedAB">
+                            <span class="empty-message">Nenhum par...</span>
+                        </div>
+                    </div>
+                    <div class="pairs-section" id="sectionA2">
+                        <div class="pairs-section-title">
+                            <span class="dot" style="background:#e91e63;"></span> A²
+                        </div>
+                        <div class="pairs-grid" id="placedA2">
+                            <span class="empty-message">Nenhum par...</span>
+                        </div>
+                    </div>
+                    <div class="pairs-section" id="sectionB2">
+                        <div class="pairs-section-title">
+                            <span class="dot" style="background:#ff9800;"></span> B²
+                        </div>
+                        <div class="pairs-grid" id="placedB2">
+                            <span class="empty-message">Nenhum par...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Questões -->
+                <div class="question-box">
+                    <h3>📝 Responda aos itens:</h3>
+                    
+                    <div class="question-item locked" id="questionA">
+                        <div class="question-label">a) Quais os elementos do conjunto A?</div>
+                        <div class="answer-input">
+                            <input type="text" id="inputA" placeholder="Ex: {1, 2, 3}" disabled>
+                            <button class="btn-verify" id="btnVerifyA" onclick="verifyAnswer('A')" disabled>✓</button>
+                            <button class="btn-show-answer" onclick="showAnswer('A')">💡</button>
+                        </div>
+                        <div class="feedback-text" id="feedbackA"></div>
+                        <div class="locked-message" id="lockedA">🔒 Complete A×B primeiro</div>
+                    </div>
+
+                    <div class="question-item locked" id="questionB">
+                        <div class="question-label">b) Quais os elementos do conjunto B?</div>
+                        <div class="answer-input">
+                            <input type="text" id="inputB" placeholder="Ex: {4, 5, 6}" disabled>
+                            <button class="btn-verify" id="btnVerifyB" onclick="verifyAnswer('B')" disabled>✓</button>
+                            <button class="btn-show-answer" onclick="showAnswer('B')">💡</button>
+                        </div>
+                        <div class="feedback-text" id="feedbackB"></div>
+                        <div class="locked-message" id="lockedB">🔒 Complete A×B primeiro</div>
+                    </div>
+
+                    <div class="question-item locked" id="questionC">
+                        <div class="question-label">c) Determine o conjunto A².</div>
+                        <div class="answer-input">
+                            <input type="text" id="inputC" placeholder="Ex: {(1,1), (1,2), ...}" disabled>
+                            <button class="btn-verify" id="btnVerifyC" onclick="verifyAnswer('C')" disabled>✓</button>
+                            <button class="btn-show-answer" onclick="showAnswer('C')">💡</button>
+                        </div>
+                        <div class="feedback-text" id="feedbackC"></div>
+                        <div class="locked-message" id="lockedC">🔒 Complete A² primeiro</div>
+                    </div>
+
+                    <div class="question-item locked" id="questionD">
+                        <div class="question-label">d) Quantos pares ordenados possui B²?</div>
+                        <div class="answer-input">
+                            <input type="text" id="inputD" placeholder="Ex: 9" disabled>
+                            <button class="btn-verify" id="btnVerifyD" onclick="verifyAnswer('D')" disabled>✓</button>
+                            <button class="btn-show-answer" onclick="showAnswer('D')">💡</button>
+                        </div>
+                        <div class="feedback-text" id="feedbackD"></div>
+                        <div class="locked-message" id="lockedD">🔒 Complete B² primeiro</div>
+                    </div>
+                </div>
+
+                <!-- Controles -->
+                <div class="btn-group">
+                    <button class="btn-undo" onclick="undoLastPoint()">↩️ Desfazer</button>
+                    <button class="btn-reset" onclick="resetAll()">🔄 Recomeçar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById('cartesianCanvas');
+        const ctx = canvas.getContext('2d');
+        const WIDTH = canvas.width;
+        const HEIGHT = canvas.height;
+
+        // Dados do problema
+        const setA = [1, 2];
+        const setB = [5, 7, 9];
+        
+        // Pares esperados para cada produto
+        const expectedPairs = {
+            AB: [{x:1,y:5}, {x:1,y:7}, {x:1,y:9}, {x:2,y:5}, {x:2,y:7}, {x:2,y:9}],
+            A2: [{x:1,y:1}, {x:1,y:2}, {x:2,y:1}, {x:2,y:2}],
+            B2: [
+                {x:5,y:5},{x:5,y:7},{x:5,y:9},
+                {x:7,y:5},{x:7,y:7},{x:7,y:9},
+                {x:9,y:5},{x:9,y:7},{x:9,y:9}
+            ]
+        };
+
+        // Pares que o estudante já marcou
+        let placedPairs = {
+            AB: [],
+            A2: [],
+            B2: []
+        };
+        
+        let currentMode = 'AB';
+        let hoveredCoords = null;
+
+        // Cores para cada modo
+        const modeColors = {
+            AB: { main: '#667eea', dark: '#3f51b5', light: 'rgba(102,126,234,0.15)', glow: 'rgba(102,126,234,0.4)', label: 'A×B' },
+            A2: { main: '#e91e63', dark: '#c2185b', light: 'rgba(233,30,99,0.12)', glow: 'rgba(233,30,99,0.35)', label: 'A²' },
+            B2: { main: '#ff9800', dark: '#f57c00', light: 'rgba(255,152,0,0.12)', glow: 'rgba(255,152,0,0.35)', label: 'B²' }
+        };
+
+        // Escala e offset - AUMENTADO o espaço superior
+        const MARGIN_TOP = 55;     // Margem superior maior para o título
+        const MARGIN_BOTTOM = 55;  // Margem inferior para legenda
+        const MARGIN_LEFT = 65;
+        const MARGIN_RIGHT = 25;
+        
+        const GRID_WIDTH = WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
+        const GRID_HEIGHT = HEIGHT - MARGIN_TOP - MARGIN_BOTTOM;
+        const SCALE = GRID_WIDTH / 10;  // 10 unidades no eixo X
+        
+        const OFFSET_X = MARGIN_LEFT;
+        const OFFSET_Y = HEIGHT - MARGIN_BOTTOM;
+
+        // Gabaritos
+        const correctAnswers = {
+            A: ['{1, 2}', '{1,2}', '{2, 1}', '{2,1}'],
+            B: ['{5, 7, 9}', '{5,7,9}', '{5, 9, 7}', '{5,9,7}', '{7, 5, 9}', '{7,5,9}', '{7, 9, 5}', '{7,9,5}', '{9, 5, 7}', '{9,5,7}', '{9, 7, 5}', '{9,7,5}'],
+            C: ['{(1,1), (1,2), (2,1), (2,2)}', '{(1,1),(1,2),(2,1),(2,2)}', '{(1, 1), (1, 2), (2, 1), (2, 2)}'],
+            D: ['9']
+        };
+
+        // Conversão de coordenadas
+        function toPixelX(x) { return OFFSET_X + x * SCALE; }
+        function toPixelY(y) { return OFFSET_Y - y * SCALE; }
+
+        function toPlaneCoord(px, py) {
+            const x = Math.round((px - OFFSET_X) / SCALE);
+            const y = Math.round((OFFSET_Y - py) / SCALE);
+            return { x, y };
+        }
+
+        function isAlreadyPlaced(mode, x, y) {
+            return placedPairs[mode].some(p => p.x === x && p.y === y);
+        }
+
+        function addPlacedPair(mode, x, y) {
+            if (!isAlreadyPlaced(mode, x, y)) {
+                placedPairs[mode].push({ x, y });
+                const maxPairs = expectedPairs[mode].length;
+                if (placedPairs[mode].length > maxPairs) {
+                    placedPairs[mode].shift();
+                }
+            }
+        }
+
+        function removePlacedPair(mode, x, y) {
+            placedPairs[mode] = placedPairs[mode].filter(p => !(p.x === x && p.y === y));
+        }
+
+        function togglePlacedPair(mode, x, y) {
+            if (isAlreadyPlaced(mode, x, y)) {
+                removePlacedPair(mode, x, y);
+            } else {
+                addPlacedPair(mode, x, y);
+            }
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('mode' + mode).classList.add('active');
+            
+            const hints = {
+                AB: '🖱️ Modo A×B • Clique nas interseções (valores de x: 1,2 | y: 5,7,9)',
+                A2: '🖱️ Modo A² • Clique nas interseções (valores de x: 1,2 | y: 1,2)',
+                B2: '🖱️ Modo B² • Clique nas interseções (valores de x: 5,7,9 | y: 5,7,9)'
+            };
+            document.getElementById('canvasHint').textContent = hints[mode];
+            
+            render();
+        }
+
+        // Desenho
+        function drawGrid() {
+            ctx.strokeStyle = '#e8e8e8';
+            ctx.lineWidth = 0.5;
+
+            for (let i = 0; i <= 10; i++) {
+                const x = OFFSET_X + i * SCALE;
+                ctx.beginPath();
+                ctx.moveTo(x, MARGIN_TOP);
+                ctx.lineTo(x, OFFSET_Y);
+                ctx.stroke();
+
+                const y = OFFSET_Y - i * SCALE;
+                ctx.beginPath();
+                ctx.moveTo(OFFSET_X, y);
+                ctx.lineTo(WIDTH - MARGIN_RIGHT, y);
+                ctx.stroke();
+            }
+        }
+
+        function drawAxes() {
+            ctx.strokeStyle = '#999';
+            ctx.lineWidth = 2;
+
+            // Eixo X
+            ctx.beginPath();
+            ctx.moveTo(OFFSET_X - 10, OFFSET_Y);
+            ctx.lineTo(WIDTH - MARGIN_RIGHT + 10, OFFSET_Y);
+            ctx.stroke();
+
+            // Eixo Y
+            ctx.beginPath();
+            ctx.moveTo(OFFSET_X, OFFSET_Y + 10);
+            ctx.lineTo(OFFSET_X, MARGIN_TOP - 10);
+            ctx.stroke();
+
+            // Setas
+            ctx.fillStyle = '#999';
+            ctx.beginPath();
+            ctx.moveTo(WIDTH - MARGIN_RIGHT + 5, OFFSET_Y - 5);
+            ctx.lineTo(WIDTH - MARGIN_RIGHT + 15, OFFSET_Y);
+            ctx.lineTo(WIDTH - MARGIN_RIGHT + 5, OFFSET_Y + 5);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(OFFSET_X - 5, MARGIN_TOP - 5);
+            ctx.lineTo(OFFSET_X, MARGIN_TOP - 15);
+            ctx.lineTo(OFFSET_X + 5, MARGIN_TOP - 5);
+            ctx.fill();
+
+            // Rótulos
+            ctx.font = 'bold 13px "Segoe UI"';
+            ctx.fillStyle = '#999';
+            ctx.fillText('x', WIDTH - MARGIN_RIGHT + 18, OFFSET_Y + 3);
+            ctx.fillText('y', OFFSET_X + 3, MARGIN_TOP - 18);
+
+            // Números nos eixos
+            ctx.font = '11px "Segoe UI"';
+            ctx.fillStyle = '#666';
+            for (let i = 0; i <= 10; i++) {
+                if (i > 0) {
+                    ctx.fillText(i, toPixelX(i) - 4, OFFSET_Y + 16);
+                    ctx.fillText(i, OFFSET_X - 25, toPixelY(i) + 4);
+                }
+            }
+            ctx.fillText('O', OFFSET_X - 16, OFFSET_Y + 16);
+        }
+
+        function drawHighlightCell(x, y, color) {
+            const px = toPixelX(x);
+            const py = toPixelY(y);
+            const halfSize = SCALE / 2 - 2;
+
+            ctx.fillStyle = color.light;
+            ctx.fillRect(px - halfSize, py - halfSize, halfSize * 2, halfSize * 2);
+
+            ctx.strokeStyle = color.main;
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([3, 3]);
+            ctx.strokeRect(px - halfSize, py - halfSize, halfSize * 2, halfSize * 2);
+            ctx.setLineDash([]);
+        }
+
+        function drawPlacedPoint(x, y, color, number, total) {
+            const px = toPixelX(x);
+            const py = toPixelY(y);
+
+            // Sombra
+            ctx.shadowColor = 'rgba(0,0,0,0.2)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = 1;
+            ctx.shadowOffsetY = 1;
+
+            // Círculo principal
+            ctx.fillStyle = color.main;
+            ctx.strokeStyle = color.dark;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(px, py, 9, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Número
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 10px "Segoe UI"';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(number, px, py);
+
+            // Coordenada abaixo
+            ctx.fillStyle = color.dark;
+            ctx.font = '9px "Courier New"';
+            ctx.fillText(`(${x},${y})`, px, py + 17);
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, WIDTH, HEIGHT);
+            
+            // Fundo branco
+            ctx.fillStyle = '#fafafa';
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+            
+            drawGrid();
+            drawAxes();
+
+            // TÍTULO - agora na área superior livre, acima da grid
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 14px "Segoe UI"';
+            ctx.textAlign = 'center';
+            const titles = {
+                AB: 'A × B — Pares com x ∈ {1, 2} e y ∈ {5, 7, 9}',
+                A2: 'A² — Pares com x ∈ {1, 2} e y ∈ {1, 2}',
+                B2: 'B² — Pares com x ∈ {5, 7, 9} e y ∈ {5, 7, 9}'
+            };
+            
+            // Fundo do título para destacar
+            const titleText = titles[currentMode];
+            const titleWidth = ctx.measureText(titleText).width;
+            const titleX = WIDTH / 2;
+            const titleY = 22;
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.fillRect(titleX - titleWidth/2 - 15, titleY - 12, titleWidth + 30, 26);
+            ctx.strokeStyle = modeColors[currentMode].main;
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(titleX - titleWidth/2 - 15, titleY - 12, titleWidth + 30, 26);
+            
+            ctx.fillStyle = modeColors[currentMode].dark;
+            ctx.fillText(titleText, titleX, titleY + 5);
+
+            // LEGENDA - na área inferior livre
+            const legendY = HEIGHT - 18;
+            ctx.font = '11px "Segoe UI"';
+            ctx.textAlign = 'left';
+            
+            // Fundo da legenda
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.fillRect(40, legendY - 12, 220, 24);
+            
+            // A×B
+            ctx.fillStyle = '#667eea';
+            ctx.beginPath();
+            ctx.arc(55, legendY, 5, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = '#333';
+            ctx.fillText('A×B', 67, legendY + 4);
+            
+            // A²
+            ctx.fillStyle = '#e91e63';
+            ctx.beginPath();
+            ctx.arc(125, legendY, 5, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = '#333';
+            ctx.fillText('A²', 137, legendY + 4);
+            
+            // B²
+            ctx.fillStyle = '#ff9800';
+            ctx.beginPath();
+            ctx.arc(180, legendY, 5, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = '#333';
+            ctx.fillText('B²', 192, legendY + 4);
+
+            // Destacar hover
+            if (hoveredCoords && !isAlreadyPlaced(currentMode, hoveredCoords.x, hoveredCoords.y)) {
+                // Verificar se o ponto está dentro da área da grid
+                const px = toPixelX(hoveredCoords.x);
+                const py = toPixelY(hoveredCoords.y);
+                
+                if (px >= OFFSET_X && px <= WIDTH - MARGIN_RIGHT && py >= MARGIN_TOP && py <= OFFSET_Y) {
+                    drawHighlightCell(hoveredCoords.x, hoveredCoords.y, modeColors[currentMode]);
+                    
+                    ctx.fillStyle = modeColors[currentMode].main;
+                    ctx.font = 'bold 11px "Courier New"';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`(${hoveredCoords.x},${hoveredCoords.y})`, px, py - 16);
+                }
+            }
+
+            // Desenhar TODOS os pares já colocados
+            placedPairs.AB.forEach((point, index) => {
+                drawPlacedPoint(point.x, point.y, modeColors.AB, index + 1, placedPairs.AB.length);
+            });
+            
+            placedPairs.A2.forEach((point, index) => {
+                drawPlacedPoint(point.x, point.y, modeColors.A2, index + 1, placedPairs.A2.length);
+            });
+            
+            placedPairs.B2.forEach((point, index) => {
+                drawPlacedPoint(point.x, point.y, modeColors.B2, index + 1, placedPairs.B2.length);
+            });
+
+            // Atualizar UI
+            updateAllUI();
+        }
+
+        function updateAllUI() {
+            updatePlacedPairsList();
+            updateProgress();
+            checkUnlocks();
+        }
+
+        function updatePlacedPairsList() {
+            const containerAB = document.getElementById('placedAB');
+            if (placedPairs.AB.length === 0) {
+                containerAB.innerHTML = '<span class="empty-message">Nenhum par...</span>';
+            } else {
+                containerAB.innerHTML = placedPairs.AB.map((p, i) =>
+                    `<span class="pair-tag ab">${i+1}º (${p.x},${p.y})</span>`
+                ).join('');
+            }
+
+            const containerA2 = document.getElementById('placedA2');
+            if (placedPairs.A2.length === 0) {
+                containerA2.innerHTML = '<span class="empty-message">Nenhum par...</span>';
+            } else {
+                containerA2.innerHTML = placedPairs.A2.map((p, i) =>
+                    `<span class="pair-tag a2">${i+1}º (${p.x},${p.y})</span>`
+                ).join('');
+            }
+
+            const containerB2 = document.getElementById('placedB2');
+            if (placedPairs.B2.length === 0) {
+                containerB2.innerHTML = '<span class="empty-message">Nenhum par...</span>';
+            } else {
+                containerB2.innerHTML = placedPairs.B2.map((p, i) =>
+                    `<span class="pair-tag b2">${i+1}º (${p.x},${p.y})</span>`
+                ).join('');
+            }
+        }
+
+        function updateProgress() {
+            const abCount = placedPairs.AB.length;
+            const a2Count = placedPairs.A2.length;
+            const b2Count = placedPairs.B2.length;
+            
+            const abTotal = expectedPairs.AB.length;
+            const a2Total = expectedPairs.A2.length;
+            const b2Total = expectedPairs.B2.length;
+
+            document.getElementById('progressAB').querySelector('.progress-count').textContent = `${abCount}/${abTotal}`;
+            document.getElementById('progressA2').querySelector('.progress-count').textContent = `${a2Count}/${a2Total}`;
+            document.getElementById('progressB2').querySelector('.progress-count').textContent = `${b2Count}/${b2Total}`;
+
+            if (abCount === abTotal) {
+                document.getElementById('progressAB').classList.add('complete');
+            } else {
+                document.getElementById('progressAB').classList.remove('complete');
+            }
+
+            if (a2Count === a2Total) {
+                document.getElementById('progressA2').classList.add('complete');
+            } else {
+                document.getElementById('progressA2').classList.remove('complete');
+            }
+
+            if (b2Count === b2Total) {
+                document.getElementById('progressB2').classList.add('complete');
+            } else {
+                document.getElementById('progressB2').classList.remove('complete');
+            }
+        }
+
+        function checkUnlocks() {
+            const abComplete = placedPairs.AB.length === expectedPairs.AB.length;
+            const a2Complete = placedPairs.A2.length === expectedPairs.A2.length;
+            const b2Complete = placedPairs.B2.length === expectedPairs.B2.length;
+
+            ['A', 'B'].forEach(q => {
+                const inputEl = document.getElementById('input' + q);
+                const btnVerify = document.getElementById('btnVerify' + q);
+                const lockedMsg = document.getElementById('locked' + q);
+                const questionEl = document.getElementById('question' + q);
+                
+                if (abComplete) {
+                    inputEl.disabled = false;
+                    btnVerify.disabled = false;
+                    questionEl.classList.remove('locked');
+                    if (lockedMsg) lockedMsg.style.display = 'none';
+                } else {
+                    inputEl.disabled = true;
+                    btnVerify.disabled = true;
+                    questionEl.classList.add('locked');
+                    if (lockedMsg) lockedMsg.style.display = 'block';
+                }
+            });
+
+            {
+                const inputEl = document.getElementById('inputC');
+                const btnVerify = document.getElementById('btnVerifyC');
+                const lockedMsg = document.getElementById('lockedC');
+                const questionEl = document.getElementById('questionC');
+                
+                if (a2Complete) {
+                    inputEl.disabled = false;
+                    btnVerify.disabled = false;
+                    questionEl.classList.remove('locked');
+                    if (lockedMsg) lockedMsg.style.display = 'none';
+                } else {
+                    inputEl.disabled = true;
+                    btnVerify.disabled = true;
+                    questionEl.classList.add('locked');
+                    if (lockedMsg) lockedMsg.style.display = 'block';
+                }
+            }
+
+            {
+                const inputEl = document.getElementById('inputD');
+                const btnVerify = document.getElementById('btnVerifyD');
+                const lockedMsg = document.getElementById('lockedD');
+                const questionEl = document.getElementById('questionD');
+                
+                if (b2Complete) {
+                    inputEl.disabled = false;
+                    btnVerify.disabled = false;
+                    questionEl.classList.remove('locked');
+                    if (lockedMsg) lockedMsg.style.display = 'none';
+                } else {
+                    inputEl.disabled = true;
+                    btnVerify.disabled = true;
+                    questionEl.classList.add('locked');
+                    if (lockedMsg) lockedMsg.style.display = 'block';
+                }
+            }
+        }
+
+        // Event listeners
+        canvas.addEventListener('mousemove', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = WIDTH / rect.width;
+            const scaleY = HEIGHT / rect.height;
+            
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+
+            const coord = toPlaneCoord(mouseX, mouseY);
+            
+            if (coord.x >= 0 && coord.x <= 10 && coord.y >= 0 && coord.y <= 10) {
+                // Verificar se está dentro da área visível da grid
+                const px = toPixelX(coord.x);
+                const py = toPixelY(coord.y);
+                if (px >= OFFSET_X && px <= WIDTH - MARGIN_RIGHT && py >= MARGIN_TOP && py <= OFFSET_Y) {
+                    hoveredCoords = coord;
+                    canvas.style.cursor = isAlreadyPlaced(currentMode, coord.x, coord.y) ? 'pointer' : 'crosshair';
+                } else {
+                    hoveredCoords = null;
+                    canvas.style.cursor = 'default';
+                }
+            } else {
+                hoveredCoords = null;
+                canvas.style.cursor = 'default';
+            }
+
+            render();
+        });
+
+        canvas.addEventListener('click', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = WIDTH / rect.width;
+            const scaleY = HEIGHT / rect.height;
+            
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+
+            const coord = toPlaneCoord(mouseX, mouseY);
+            
+            if (coord.x < 0 || coord.x > 10 || coord.y < 0 || coord.y > 10) return;
+            
+            // Verificar se está dentro da área da grid
+            const px = toPixelX(coord.x);
+            const py = toPixelY(coord.y);
+            if (px < OFFSET_X || px > WIDTH - MARGIN_RIGHT || py < MARGIN_TOP || py > OFFSET_Y) return;
+
+            togglePlacedPair(currentMode, coord.x, coord.y);
+            render();
+        });
+
+        canvas.addEventListener('mouseleave', function() {
+            hoveredCoords = null;
+            render();
+        });
+
+        // Touch events
+        canvas.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = WIDTH / rect.width;
+            const scaleY = HEIGHT / rect.height;
+            
+            const mouseX = (touch.clientX - rect.left) * scaleX;
+            const mouseY = (touch.clientY - rect.top) * scaleY;
+
+            const coord = toPlaneCoord(mouseX, mouseY);
+            
+            if (coord.x < 0 || coord.x > 10 || coord.y < 0 || coord.y > 10) return;
+            
+            const px = toPixelX(coord.x);
+            const py = toPixelY(coord.y);
+            if (px < OFFSET_X || px > WIDTH - MARGIN_RIGHT || py < MARGIN_TOP || py > OFFSET_Y) return;
+
+            togglePlacedPair(currentMode, coord.x, coord.y);
+            render();
+        }, { passive: false });
+
+        // Funções dos botões
+        function undoLastPoint() {
+            if (placedPairs[currentMode].length > 0) {
+                placedPairs[currentMode].pop();
+                render();
+            }
+        }
+
+        function resetAll() {
+            placedPairs = { AB: [], A2: [], B2: [] };
+            
+            ['A', 'B', 'C', 'D'].forEach(q => {
+                const inputEl = document.getElementById('input' + q);
+                const questionEl = document.getElementById('question' + q);
+                const feedbackEl = document.getElementById('feedback' + q);
+                const btnVerify = document.getElementById('btnVerify' + q);
+                const lockedMsg = document.getElementById('locked' + q);
+                
+                inputEl.value = '';
+                inputEl.disabled = true;
+                inputEl.classList.remove('correct-input', 'wrong-input');
+                btnVerify.disabled = true;
+                questionEl.classList.add('locked');
+                questionEl.classList.remove('correct', 'wrong');
+                feedbackEl.textContent = '';
+                feedbackEl.className = 'feedback-text';
+                if (lockedMsg) lockedMsg.style.display = 'block';
+            });
+            
+            render();
+        }
+
+        function normalizeAnswer(input) {
+            return input
+                .replace(/\s+/g, ' ')
+                .replace(/,\s*/g, ',')
+                .replace(/\s*,/g, ',')
+                .replace(/\(\s*/g, '(')
+                .replace(/\s*\)/g, ')')
+                .replace(/{\s*/g, '{')
+                .replace(/\s*}/g, '}')
+                .trim();
+        }
+
+        function verifyAnswer(question) {
+            const inputEl = document.getElementById('input' + question);
+            const questionEl = document.getElementById('question' + question);
+            const feedbackEl = document.getElementById('feedback' + question);
+            
+            const userAnswer = normalizeAnswer(inputEl.value);
+            const correctList = correctAnswers[question];
+            
+            const isCorrect = correctList.some(answer => normalizeAnswer(answer) === userAnswer);
+
+            if (isCorrect) {
+                inputEl.classList.add('correct-input');
+                inputEl.classList.remove('wrong-input');
+                questionEl.classList.add('correct');
+                questionEl.classList.remove('wrong');
+                feedbackEl.textContent = '✅ Correto! Muito bem!';
+                feedbackEl.className = 'feedback-text correct';
+            } else {
+                inputEl.classList.add('wrong-input');
+                inputEl.classList.remove('correct-input');
+                questionEl.classList.add('wrong');
+                questionEl.classList.remove('correct');
+                feedbackEl.textContent = '❌ Incorreto. Revise os pares que você localizou.';
+                feedbackEl.className = 'feedback-text wrong';
+            }
+        }
+
+        function showAnswer(question) {
+            const inputEl = document.getElementById('input' + question);
+            const feedbackEl = document.getElementById('feedback' + question);
+            const questionEl = document.getElementById('question' + question);
+            
+            inputEl.value = correctAnswers[question][0];
+            inputEl.classList.add('correct-input');
+            inputEl.classList.remove('wrong-input');
+            questionEl.classList.add('correct');
+            questionEl.classList.remove('wrong');
+            feedbackEl.textContent = '💡 Esta é a resposta correta.';
+            feedbackEl.className = 'feedback-text correct';
+        }
+
+        // Inicializar
+        setMode('AB');
+        render();
+    </script>
+</body>
+</html>
