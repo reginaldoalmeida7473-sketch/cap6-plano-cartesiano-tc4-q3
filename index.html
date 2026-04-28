@@ -85,7 +85,6 @@
             margin-top: 4px;
         }
 
-        /* Seletor de modo */
         .mode-selector {
             display: flex;
             gap: 5px;
@@ -125,31 +124,6 @@
             color: #888;
             text-align: center;
             margin-top: 2px;
-        }
-
-        .given-set-box {
-            background: #f0f4ff;
-            border: 2px solid #667eea;
-            border-radius: 10px;
-            padding: 12px;
-        }
-
-        .given-set-box h3 {
-            color: #333;
-            margin-bottom: 6px;
-            font-size: 14px;
-        }
-
-        .set-display {
-            background: white;
-            border-radius: 8px;
-            padding: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            text-align: center;
-            color: #333;
-            letter-spacing: 0.5px;
-            line-height: 1.5;
         }
 
         .progress-container {
@@ -274,6 +248,31 @@
             color: #bbb;
             font-size: 11px;
             font-style: italic;
+        }
+
+        .feedback-box {
+            background: #333;
+            color: #0f0;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-align: center;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .feedback-box.success {
+            background: #1b5e20;
+            color: #a5d6a7;
+        }
+
+        .feedback-box.error {
+            background: #b71c1c;
+            color: #ef9a9a;
         }
 
         .question-box {
@@ -489,14 +488,6 @@
 
             <!-- Info Section -->
             <div class="info-section">
-                <!-- Conjunto dado -->
-                <div class="given-set-box">
-                    <h3>📋 Conjunto Dado:</h3>
-                    <div class="set-display">
-                        A × B = {(1,5), (1,7), (1,9), (2,5), (2,7), (2,9)}
-                    </div>
-                </div>
-
                 <!-- Seletor de Modo -->
                 <div class="mode-selector">
                     <button class="mode-btn mode-ab active" id="modeAB" onclick="setMode('AB')">
@@ -511,6 +502,11 @@
                 </div>
                 <div class="mode-legend">
                     Clique para alternar o conjunto que está marcando
+                </div>
+
+                <!-- Feedback em tempo real -->
+                <div class="feedback-box" id="feedbackBox">
+                    🎯 Clique no plano para encontrar os pares!
                 </div>
 
                 <!-- Progresso -->
@@ -531,7 +527,7 @@
 
                 <!-- Pares localizados -->
                 <div class="pairs-list" id="pairsList">
-                    <h3>📍 Pares Localizados:</h3>
+                    <h3>📍 Pares Localizados (apenas acertos):</h3>
                     <div class="pairs-section" id="sectionAB">
                         <div class="pairs-section-title">
                             <span class="dot" style="background:#667eea;"></span> A × B
@@ -617,632 +613,680 @@
     </div>
 
     <script>
-        // Canvas setup
-        const canvas = document.getElementById('cartesianCanvas');
-        const ctx = canvas.getContext('2d');
-        const WIDTH = canvas.width;
-        const HEIGHT = canvas.height;
+        (function() {
+            const canvas = document.getElementById('cartesianCanvas');
+            const ctx = canvas.getContext('2d');
+            const WIDTH = canvas.width;
+            const HEIGHT = canvas.height;
 
-        // Dados do problema
-        const setA = [1, 2];
-        const setB = [5, 7, 9];
-        
-        // Pares esperados para cada produto
-        const expectedPairs = {
-            AB: [{x:1,y:5}, {x:1,y:7}, {x:1,y:9}, {x:2,y:5}, {x:2,y:7}, {x:2,y:9}],
-            A2: [{x:1,y:1}, {x:1,y:2}, {x:2,y:1}, {x:2,y:2}],
-            B2: [
-                {x:5,y:5},{x:5,y:7},{x:5,y:9},
-                {x:7,y:5},{x:7,y:7},{x:7,y:9},
-                {x:9,y:5},{x:9,y:7},{x:9,y:9}
-            ]
-        };
-
-        // Pares que o estudante já marcou
-        let placedPairs = {
-            AB: [],
-            A2: [],
-            B2: []
-        };
-        
-        let currentMode = 'AB';
-        let hoveredCoords = null;
-
-        // Cores para cada modo
-        const modeColors = {
-            AB: { main: '#667eea', dark: '#3f51b5', light: 'rgba(102,126,234,0.15)', glow: 'rgba(102,126,234,0.4)', label: 'A×B' },
-            A2: { main: '#e91e63', dark: '#c2185b', light: 'rgba(233,30,99,0.12)', glow: 'rgba(233,30,99,0.35)', label: 'A²' },
-            B2: { main: '#ff9800', dark: '#f57c00', light: 'rgba(255,152,0,0.12)', glow: 'rgba(255,152,0,0.35)', label: 'B²' }
-        };
-
-        // Escala e offset - AUMENTADO o espaço superior
-        const MARGIN_TOP = 55;     // Margem superior maior para o título
-        const MARGIN_BOTTOM = 55;  // Margem inferior para legenda
-        const MARGIN_LEFT = 65;
-        const MARGIN_RIGHT = 25;
-        
-        const GRID_WIDTH = WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
-        const GRID_HEIGHT = HEIGHT - MARGIN_TOP - MARGIN_BOTTOM;
-        const SCALE = GRID_WIDTH / 10;  // 10 unidades no eixo X
-        
-        const OFFSET_X = MARGIN_LEFT;
-        const OFFSET_Y = HEIGHT - MARGIN_BOTTOM;
-
-        // Gabaritos
-        const correctAnswers = {
-            A: ['{1, 2}', '{1,2}', '{2, 1}', '{2,1}'],
-            B: ['{5, 7, 9}', '{5,7,9}', '{5, 9, 7}', '{5,9,7}', '{7, 5, 9}', '{7,5,9}', '{7, 9, 5}', '{7,9,5}', '{9, 5, 7}', '{9,5,7}', '{9, 7, 5}', '{9,7,5}'],
-            C: ['{(1,1), (1,2), (2,1), (2,2)}', '{(1,1),(1,2),(2,1),(2,2)}', '{(1, 1), (1, 2), (2, 1), (2, 2)}'],
-            D: ['9']
-        };
-
-        // Conversão de coordenadas
-        function toPixelX(x) { return OFFSET_X + x * SCALE; }
-        function toPixelY(y) { return OFFSET_Y - y * SCALE; }
-
-        function toPlaneCoord(px, py) {
-            const x = Math.round((px - OFFSET_X) / SCALE);
-            const y = Math.round((OFFSET_Y - py) / SCALE);
-            return { x, y };
-        }
-
-        function isAlreadyPlaced(mode, x, y) {
-            return placedPairs[mode].some(p => p.x === x && p.y === y);
-        }
-
-        function addPlacedPair(mode, x, y) {
-            if (!isAlreadyPlaced(mode, x, y)) {
-                placedPairs[mode].push({ x, y });
-                const maxPairs = expectedPairs[mode].length;
-                if (placedPairs[mode].length > maxPairs) {
-                    placedPairs[mode].shift();
-                }
-            }
-        }
-
-        function removePlacedPair(mode, x, y) {
-            placedPairs[mode] = placedPairs[mode].filter(p => !(p.x === x && p.y === y));
-        }
-
-        function togglePlacedPair(mode, x, y) {
-            if (isAlreadyPlaced(mode, x, y)) {
-                removePlacedPair(mode, x, y);
-            } else {
-                addPlacedPair(mode, x, y);
-            }
-        }
-
-        function setMode(mode) {
-            currentMode = mode;
+            // Dados do problema
+            const setA = [1, 2];
+            const setB = [5, 7, 9];
             
-            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('mode' + mode).classList.add('active');
-            
-            const hints = {
-                AB: '🖱️ Modo A×B • Clique nas interseções (valores de x: 1,2 | y: 5,7,9)',
-                A2: '🖱️ Modo A² • Clique nas interseções (valores de x: 1,2 | y: 1,2)',
-                B2: '🖱️ Modo B² • Clique nas interseções (valores de x: 5,7,9 | y: 5,7,9)'
+            // Pares esperados para cada produto
+            const expectedPairs = {
+                AB: [{x:1,y:5}, {x:1,y:7}, {x:1,y:9}, {x:2,y:5}, {x:2,y:7}, {x:2,y:9}],
+                A2: [{x:1,y:1}, {x:1,y:2}, {x:2,y:1}, {x:2,y:2}],
+                B2: [
+                    {x:5,y:5},{x:5,y:7},{x:5,y:9},
+                    {x:7,y:5},{x:7,y:7},{x:7,y:9},
+                    {x:9,y:5},{x:9,y:7},{x:9,y:9}
+                ]
             };
-            document.getElementById('canvasHint').textContent = hints[mode];
-            
-            render();
-        }
 
-        // Desenho
-        function drawGrid() {
-            ctx.strokeStyle = '#e8e8e8';
-            ctx.lineWidth = 0.5;
-
-            for (let i = 0; i <= 10; i++) {
-                const x = OFFSET_X + i * SCALE;
-                ctx.beginPath();
-                ctx.moveTo(x, MARGIN_TOP);
-                ctx.lineTo(x, OFFSET_Y);
-                ctx.stroke();
-
-                const y = OFFSET_Y - i * SCALE;
-                ctx.beginPath();
-                ctx.moveTo(OFFSET_X, y);
-                ctx.lineTo(WIDTH - MARGIN_RIGHT, y);
-                ctx.stroke();
-            }
-        }
-
-        function drawAxes() {
-            ctx.strokeStyle = '#999';
-            ctx.lineWidth = 2;
-
-            // Eixo X
-            ctx.beginPath();
-            ctx.moveTo(OFFSET_X - 10, OFFSET_Y);
-            ctx.lineTo(WIDTH - MARGIN_RIGHT + 10, OFFSET_Y);
-            ctx.stroke();
-
-            // Eixo Y
-            ctx.beginPath();
-            ctx.moveTo(OFFSET_X, OFFSET_Y + 10);
-            ctx.lineTo(OFFSET_X, MARGIN_TOP - 10);
-            ctx.stroke();
-
-            // Setas
-            ctx.fillStyle = '#999';
-            ctx.beginPath();
-            ctx.moveTo(WIDTH - MARGIN_RIGHT + 5, OFFSET_Y - 5);
-            ctx.lineTo(WIDTH - MARGIN_RIGHT + 15, OFFSET_Y);
-            ctx.lineTo(WIDTH - MARGIN_RIGHT + 5, OFFSET_Y + 5);
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.moveTo(OFFSET_X - 5, MARGIN_TOP - 5);
-            ctx.lineTo(OFFSET_X, MARGIN_TOP - 15);
-            ctx.lineTo(OFFSET_X + 5, MARGIN_TOP - 5);
-            ctx.fill();
-
-            // Rótulos
-            ctx.font = 'bold 13px "Segoe UI"';
-            ctx.fillStyle = '#999';
-            ctx.fillText('x', WIDTH - MARGIN_RIGHT + 18, OFFSET_Y + 3);
-            ctx.fillText('y', OFFSET_X + 3, MARGIN_TOP - 18);
-
-            // Números nos eixos
-            ctx.font = '11px "Segoe UI"';
-            ctx.fillStyle = '#666';
-            for (let i = 0; i <= 10; i++) {
-                if (i > 0) {
-                    ctx.fillText(i, toPixelX(i) - 4, OFFSET_Y + 16);
-                    ctx.fillText(i, OFFSET_X - 25, toPixelY(i) + 4);
-                }
-            }
-            ctx.fillText('O', OFFSET_X - 16, OFFSET_Y + 16);
-        }
-
-        function drawHighlightCell(x, y, color) {
-            const px = toPixelX(x);
-            const py = toPixelY(y);
-            const halfSize = SCALE / 2 - 2;
-
-            ctx.fillStyle = color.light;
-            ctx.fillRect(px - halfSize, py - halfSize, halfSize * 2, halfSize * 2);
-
-            ctx.strokeStyle = color.main;
-            ctx.lineWidth = 1.5;
-            ctx.setLineDash([3, 3]);
-            ctx.strokeRect(px - halfSize, py - halfSize, halfSize * 2, halfSize * 2);
-            ctx.setLineDash([]);
-        }
-
-        function drawPlacedPoint(x, y, color, number, total) {
-            const px = toPixelX(x);
-            const py = toPixelY(y);
-
-            // Sombra
-            ctx.shadowColor = 'rgba(0,0,0,0.2)';
-            ctx.shadowBlur = 4;
-            ctx.shadowOffsetX = 1;
-            ctx.shadowOffsetY = 1;
-
-            // Círculo principal
-            ctx.fillStyle = color.main;
-            ctx.strokeStyle = color.dark;
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(px, py, 9, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-
-            // Número
-            ctx.shadowColor = 'transparent';
-            ctx.shadowBlur = 0;
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 10px "Segoe UI"';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(number, px, py);
-
-            // Coordenada abaixo
-            ctx.fillStyle = color.dark;
-            ctx.font = '9px "Courier New"';
-            ctx.fillText(`(${x},${y})`, px, py + 17);
-        }
-
-        function render() {
-            ctx.clearRect(0, 0, WIDTH, HEIGHT);
-            
-            // Fundo branco
-            ctx.fillStyle = '#fafafa';
-            ctx.fillRect(0, 0, WIDTH, HEIGHT);
-            
-            drawGrid();
-            drawAxes();
-
-            // TÍTULO - agora na área superior livre, acima da grid
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 14px "Segoe UI"';
-            ctx.textAlign = 'center';
-            const titles = {
-                AB: 'A × B — Pares com x ∈ {1, 2} e y ∈ {5, 7, 9}',
-                A2: 'A² — Pares com x ∈ {1, 2} e y ∈ {1, 2}',
-                B2: 'B² — Pares com x ∈ {5, 7, 9} e y ∈ {5, 7, 9}'
+            // Pares que o estudante já marcou (apenas acertos)
+            let placedPairs = {
+                AB: [],
+                A2: [],
+                B2: []
             };
             
-            // Fundo do título para destacar
-            const titleText = titles[currentMode];
-            const titleWidth = ctx.measureText(titleText).width;
-            const titleX = WIDTH / 2;
-            const titleY = 22;
+            // Tentativas erradas (para feedback visual temporário)
+            let wrongAttempts = [];
             
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-            ctx.fillRect(titleX - titleWidth/2 - 15, titleY - 12, titleWidth + 30, 26);
-            ctx.strokeStyle = modeColors[currentMode].main;
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(titleX - titleWidth/2 - 15, titleY - 12, titleWidth + 30, 26);
-            
-            ctx.fillStyle = modeColors[currentMode].dark;
-            ctx.fillText(titleText, titleX, titleY + 5);
+            let currentMode = 'AB';
+            let hoveredCoords = null;
 
-            // LEGENDA - na área inferior livre
-            const legendY = HEIGHT - 18;
-            ctx.font = '11px "Segoe UI"';
-            ctx.textAlign = 'left';
-            
-            // Fundo da legenda
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-            ctx.fillRect(40, legendY - 12, 220, 24);
-            
-            // A×B
-            ctx.fillStyle = '#667eea';
-            ctx.beginPath();
-            ctx.arc(55, legendY, 5, 0, Math.PI*2);
-            ctx.fill();
-            ctx.fillStyle = '#333';
-            ctx.fillText('A×B', 67, legendY + 4);
-            
-            // A²
-            ctx.fillStyle = '#e91e63';
-            ctx.beginPath();
-            ctx.arc(125, legendY, 5, 0, Math.PI*2);
-            ctx.fill();
-            ctx.fillStyle = '#333';
-            ctx.fillText('A²', 137, legendY + 4);
-            
-            // B²
-            ctx.fillStyle = '#ff9800';
-            ctx.beginPath();
-            ctx.arc(180, legendY, 5, 0, Math.PI*2);
-            ctx.fill();
-            ctx.fillStyle = '#333';
-            ctx.fillText('B²', 192, legendY + 4);
+            const modeColors = {
+                AB: { main: '#667eea', dark: '#3f51b5', light: 'rgba(102,126,234,0.15)', glow: 'rgba(102,126,234,0.4)', label: 'A×B' },
+                A2: { main: '#e91e63', dark: '#c2185b', light: 'rgba(233,30,99,0.12)', glow: 'rgba(233,30,99,0.35)', label: 'A²' },
+                B2: { main: '#ff9800', dark: '#f57c00', light: 'rgba(255,152,0,0.12)', glow: 'rgba(255,152,0,0.35)', label: 'B²' }
+            };
 
-            // Destacar hover
-            if (hoveredCoords && !isAlreadyPlaced(currentMode, hoveredCoords.x, hoveredCoords.y)) {
-                // Verificar se o ponto está dentro da área da grid
-                const px = toPixelX(hoveredCoords.x);
-                const py = toPixelY(hoveredCoords.y);
+            const MARGIN_TOP = 55;
+            const MARGIN_BOTTOM = 55;
+            const MARGIN_LEFT = 65;
+            const MARGIN_RIGHT = 25;
+            
+            const GRID_WIDTH = WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
+            const SCALE = GRID_WIDTH / 10;
+            
+            const OFFSET_X = MARGIN_LEFT;
+            const OFFSET_Y = HEIGHT - MARGIN_BOTTOM;
+
+            const correctAnswers = {
+                A: ['{1, 2}', '{1,2}', '{2, 1}', '{2,1}'],
+                B: ['{5, 7, 9}', '{5,7,9}', '{5, 9, 7}', '{5,9,7}', '{7, 5, 9}', '{7,5,9}', '{7, 9, 5}', '{7,9,5}', '{9, 5, 7}', '{9,5,7}', '{9, 7, 5}', '{9,7,5}'],
+                C: ['{(1,1), (1,2), (2,1), (2,2)}', '{(1,1),(1,2),(2,1),(2,2)}', '{(1, 1), (1, 2), (2, 1), (2, 2)}'],
+                D: ['9']
+            };
+
+            function toPixelX(x) { return OFFSET_X + x * SCALE; }
+            function toPixelY(y) { return OFFSET_Y - y * SCALE; }
+
+            function toPlaneCoord(px, py) {
+                const x = Math.round((px - OFFSET_X) / SCALE);
+                const y = Math.round((OFFSET_Y - py) / SCALE);
+                return { x, y };
+            }
+
+            // Verifica se o par pertence ao modo atual
+            function isExpectedPair(mode, x, y) {
+                return expectedPairs[mode].some(p => p.x === x && p.y === y);
+            }
+
+            function isAlreadyPlaced(mode, x, y) {
+                return placedPairs[mode].some(p => p.x === x && p.y === y);
+            }
+
+            // Adiciona par APENAS se for correto
+            function tryAddPair(mode, x, y) {
+                // Verificar se é um par esperado para este modo
+                if (isExpectedPair(mode, x, y)) {
+                    // Verificar se já foi colocado
+                    if (!isAlreadyPlaced(mode, x, y)) {
+                        placedPairs[mode].push({ x, y });
+                        return 'correct';
+                    } else {
+                        return 'already_placed';
+                    }
+                } else {
+                    // Registrar tentativa errada
+                    wrongAttempts.push({ x, y, mode, timestamp: Date.now() });
+                    // Remover após 1.5 segundos
+                    setTimeout(() => {
+                        wrongAttempts = wrongAttempts.filter(a => !(a.x === x && a.y === y && a.mode === mode));
+                        render();
+                    }, 1500);
+                    return 'wrong';
+                }
+            }
+
+            function removePlacedPair(mode, x, y) {
+                placedPairs[mode] = placedPairs[mode].filter(p => !(p.x === x && p.y === y));
+            }
+
+            function setMode(mode) {
+                currentMode = mode;
                 
-                if (px >= OFFSET_X && px <= WIDTH - MARGIN_RIGHT && py >= MARGIN_TOP && py <= OFFSET_Y) {
-                    drawHighlightCell(hoveredCoords.x, hoveredCoords.y, modeColors[currentMode]);
+                document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById('mode' + mode).classList.add('active');
+                
+                const hints = {
+                    AB: '🖱️ Modo A×B • Clique nas interseções (valores de x: 1,2 | y: 5,7,9)',
+                    A2: '🖱️ Modo A² • Clique nas interseções (valores de x: 1,2 | y: 1,2)',
+                    B2: '🖱️ Modo B² • Clique nas interseções (valores de x: 5,7,9 | y: 5,7,9)'
+                };
+                document.getElementById('canvasHint').textContent = hints[mode];
+                
+                // Limpar tentativas erradas ao trocar de modo
+                wrongAttempts = [];
+                
+                render();
+            }
+
+            function drawGrid() {
+                ctx.strokeStyle = '#e8e8e8';
+                ctx.lineWidth = 0.5;
+
+                for (let i = 0; i <= 10; i++) {
+                    const x = OFFSET_X + i * SCALE;
+                    ctx.beginPath();
+                    ctx.moveTo(x, MARGIN_TOP);
+                    ctx.lineTo(x, OFFSET_Y);
+                    ctx.stroke();
+
+                    const y = OFFSET_Y - i * SCALE;
+                    ctx.beginPath();
+                    ctx.moveTo(OFFSET_X, y);
+                    ctx.lineTo(WIDTH - MARGIN_RIGHT, y);
+                    ctx.stroke();
+                }
+            }
+
+            function drawAxes() {
+                ctx.strokeStyle = '#999';
+                ctx.lineWidth = 2;
+
+                ctx.beginPath();
+                ctx.moveTo(OFFSET_X - 10, OFFSET_Y);
+                ctx.lineTo(WIDTH - MARGIN_RIGHT + 10, OFFSET_Y);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(OFFSET_X, OFFSET_Y + 10);
+                ctx.lineTo(OFFSET_X, MARGIN_TOP - 10);
+                ctx.stroke();
+
+                ctx.fillStyle = '#999';
+                ctx.beginPath();
+                ctx.moveTo(WIDTH - MARGIN_RIGHT + 5, OFFSET_Y - 5);
+                ctx.lineTo(WIDTH - MARGIN_RIGHT + 15, OFFSET_Y);
+                ctx.lineTo(WIDTH - MARGIN_RIGHT + 5, OFFSET_Y + 5);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(OFFSET_X - 5, MARGIN_TOP - 5);
+                ctx.lineTo(OFFSET_X, MARGIN_TOP - 15);
+                ctx.lineTo(OFFSET_X + 5, MARGIN_TOP - 5);
+                ctx.fill();
+
+                ctx.font = 'bold 13px "Segoe UI"';
+                ctx.fillStyle = '#999';
+                ctx.fillText('x', WIDTH - MARGIN_RIGHT + 18, OFFSET_Y + 3);
+                ctx.fillText('y', OFFSET_X + 3, MARGIN_TOP - 18);
+
+                ctx.font = '11px "Segoe UI"';
+                ctx.fillStyle = '#666';
+                for (let i = 0; i <= 10; i++) {
+                    if (i > 0) {
+                        ctx.fillText(i, toPixelX(i) - 4, OFFSET_Y + 16);
+                        ctx.fillText(i, OFFSET_X - 25, toPixelY(i) + 4);
+                    }
+                }
+                ctx.fillText('O', OFFSET_X - 16, OFFSET_Y + 16);
+            }
+
+            function drawHighlightCell(x, y, color) {
+                const px = toPixelX(x);
+                const py = toPixelY(y);
+                const halfSize = SCALE / 2 - 2;
+
+                ctx.fillStyle = color.light;
+                ctx.fillRect(px - halfSize, py - halfSize, halfSize * 2, halfSize * 2);
+
+                ctx.strokeStyle = color.main;
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([3, 3]);
+                ctx.strokeRect(px - halfSize, py - halfSize, halfSize * 2, halfSize * 2);
+                ctx.setLineDash([]);
+            }
+
+            function drawPlacedPoint(x, y, color, number) {
+                const px = toPixelX(x);
+                const py = toPixelY(y);
+
+                ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                ctx.shadowBlur = 4;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
+
+                ctx.fillStyle = color.main;
+                ctx.strokeStyle = color.dark;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(px, py, 9, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 10px "Segoe UI"';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(number, px, py);
+
+                ctx.fillStyle = color.dark;
+                ctx.font = '9px "Courier New"';
+                ctx.fillText(`(${x},${y})`, px, py + 17);
+            }
+
+            function drawWrongAttempt(x, y) {
+                const px = toPixelX(x);
+                const py = toPixelY(y);
+
+                // X vermelho
+                ctx.strokeStyle = '#f44336';
+                ctx.lineWidth = 2.5;
+                const size = 7;
+                ctx.beginPath();
+                ctx.moveTo(px - size, py - size);
+                ctx.lineTo(px + size, py + size);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(px + size, py - size);
+                ctx.lineTo(px - size, py + size);
+                ctx.stroke();
+            }
+
+            function render() {
+                ctx.clearRect(0, 0, WIDTH, HEIGHT);
+                ctx.fillStyle = '#fafafa';
+                ctx.fillRect(0, 0, WIDTH, HEIGHT);
+                
+                drawGrid();
+                drawAxes();
+
+                // Título
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 14px "Segoe UI"';
+                ctx.textAlign = 'center';
+                const titles = {
+                    AB: 'A × B — Pares com x ∈ {1, 2} e y ∈ {5, 7, 9}',
+                    A2: 'A² — Pares com x ∈ {1, 2} e y ∈ {1, 2}',
+                    B2: 'B² — Pares com x ∈ {5, 7, 9} e y ∈ {5, 7, 9}'
+                };
+                
+                const titleText = titles[currentMode];
+                const titleWidth = ctx.measureText(titleText).width;
+                const titleX = WIDTH / 2;
+                const titleY = 22;
+                
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                ctx.fillRect(titleX - titleWidth/2 - 15, titleY - 12, titleWidth + 30, 26);
+                ctx.strokeStyle = modeColors[currentMode].main;
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(titleX - titleWidth/2 - 15, titleY - 12, titleWidth + 30, 26);
+                
+                ctx.fillStyle = modeColors[currentMode].dark;
+                ctx.fillText(titleText, titleX, titleY + 5);
+
+                // Legenda inferior
+                const legendY = HEIGHT - 18;
+                ctx.font = '11px "Segoe UI"';
+                ctx.textAlign = 'left';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                ctx.fillRect(40, legendY - 12, 220, 24);
+                
+                ctx.fillStyle = '#667eea';
+                ctx.beginPath();
+                ctx.arc(55, legendY, 5, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#333';
+                ctx.fillText('A×B', 67, legendY + 4);
+                
+                ctx.fillStyle = '#e91e63';
+                ctx.beginPath();
+                ctx.arc(125, legendY, 5, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#333';
+                ctx.fillText('A²', 137, legendY + 4);
+                
+                ctx.fillStyle = '#ff9800';
+                ctx.beginPath();
+                ctx.arc(180, legendY, 5, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#333';
+                ctx.fillText('B²', 192, legendY + 4);
+
+                // Tentativas erradas (X vermelho temporário)
+                wrongAttempts.forEach(attempt => {
+                    if (attempt.mode === currentMode) {
+                        drawWrongAttempt(attempt.x, attempt.y);
+                    }
+                });
+
+                // Hover
+                if (hoveredCoords && !isAlreadyPlaced(currentMode, hoveredCoords.x, hoveredCoords.y)) {
+                    const px = toPixelX(hoveredCoords.x);
+                    const py = toPixelY(hoveredCoords.y);
                     
-                    ctx.fillStyle = modeColors[currentMode].main;
-                    ctx.font = 'bold 11px "Courier New"';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(`(${hoveredCoords.x},${hoveredCoords.y})`, px, py - 16);
+                    if (px >= OFFSET_X && px <= WIDTH - MARGIN_RIGHT && py >= MARGIN_TOP && py <= OFFSET_Y) {
+                        drawHighlightCell(hoveredCoords.x, hoveredCoords.y, modeColors[currentMode]);
+                        
+                        ctx.fillStyle = modeColors[currentMode].main;
+                        ctx.font = 'bold 11px "Courier New"';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`(${hoveredCoords.x},${hoveredCoords.y})`, px, py - 16);
+                    }
                 }
-            }
 
-            // Desenhar TODOS os pares já colocados
-            placedPairs.AB.forEach((point, index) => {
-                drawPlacedPoint(point.x, point.y, modeColors.AB, index + 1, placedPairs.AB.length);
-            });
-            
-            placedPairs.A2.forEach((point, index) => {
-                drawPlacedPoint(point.x, point.y, modeColors.A2, index + 1, placedPairs.A2.length);
-            });
-            
-            placedPairs.B2.forEach((point, index) => {
-                drawPlacedPoint(point.x, point.y, modeColors.B2, index + 1, placedPairs.B2.length);
-            });
-
-            // Atualizar UI
-            updateAllUI();
-        }
-
-        function updateAllUI() {
-            updatePlacedPairsList();
-            updateProgress();
-            checkUnlocks();
-        }
-
-        function updatePlacedPairsList() {
-            const containerAB = document.getElementById('placedAB');
-            if (placedPairs.AB.length === 0) {
-                containerAB.innerHTML = '<span class="empty-message">Nenhum par...</span>';
-            } else {
-                containerAB.innerHTML = placedPairs.AB.map((p, i) =>
-                    `<span class="pair-tag ab">${i+1}º (${p.x},${p.y})</span>`
-                ).join('');
-            }
-
-            const containerA2 = document.getElementById('placedA2');
-            if (placedPairs.A2.length === 0) {
-                containerA2.innerHTML = '<span class="empty-message">Nenhum par...</span>';
-            } else {
-                containerA2.innerHTML = placedPairs.A2.map((p, i) =>
-                    `<span class="pair-tag a2">${i+1}º (${p.x},${p.y})</span>`
-                ).join('');
-            }
-
-            const containerB2 = document.getElementById('placedB2');
-            if (placedPairs.B2.length === 0) {
-                containerB2.innerHTML = '<span class="empty-message">Nenhum par...</span>';
-            } else {
-                containerB2.innerHTML = placedPairs.B2.map((p, i) =>
-                    `<span class="pair-tag b2">${i+1}º (${p.x},${p.y})</span>`
-                ).join('');
-            }
-        }
-
-        function updateProgress() {
-            const abCount = placedPairs.AB.length;
-            const a2Count = placedPairs.A2.length;
-            const b2Count = placedPairs.B2.length;
-            
-            const abTotal = expectedPairs.AB.length;
-            const a2Total = expectedPairs.A2.length;
-            const b2Total = expectedPairs.B2.length;
-
-            document.getElementById('progressAB').querySelector('.progress-count').textContent = `${abCount}/${abTotal}`;
-            document.getElementById('progressA2').querySelector('.progress-count').textContent = `${a2Count}/${a2Total}`;
-            document.getElementById('progressB2').querySelector('.progress-count').textContent = `${b2Count}/${b2Total}`;
-
-            if (abCount === abTotal) {
-                document.getElementById('progressAB').classList.add('complete');
-            } else {
-                document.getElementById('progressAB').classList.remove('complete');
-            }
-
-            if (a2Count === a2Total) {
-                document.getElementById('progressA2').classList.add('complete');
-            } else {
-                document.getElementById('progressA2').classList.remove('complete');
-            }
-
-            if (b2Count === b2Total) {
-                document.getElementById('progressB2').classList.add('complete');
-            } else {
-                document.getElementById('progressB2').classList.remove('complete');
-            }
-        }
-
-        function checkUnlocks() {
-            const abComplete = placedPairs.AB.length === expectedPairs.AB.length;
-            const a2Complete = placedPairs.A2.length === expectedPairs.A2.length;
-            const b2Complete = placedPairs.B2.length === expectedPairs.B2.length;
-
-            ['A', 'B'].forEach(q => {
-                const inputEl = document.getElementById('input' + q);
-                const btnVerify = document.getElementById('btnVerify' + q);
-                const lockedMsg = document.getElementById('locked' + q);
-                const questionEl = document.getElementById('question' + q);
+                // Desenhar TODOS os pares já colocados (acertos)
+                placedPairs.AB.forEach((point, index) => {
+                    drawPlacedPoint(point.x, point.y, modeColors.AB, index + 1);
+                });
                 
-                if (abComplete) {
-                    inputEl.disabled = false;
-                    btnVerify.disabled = false;
-                    questionEl.classList.remove('locked');
-                    if (lockedMsg) lockedMsg.style.display = 'none';
-                } else {
-                    inputEl.disabled = true;
-                    btnVerify.disabled = true;
-                    questionEl.classList.add('locked');
-                    if (lockedMsg) lockedMsg.style.display = 'block';
-                }
-            });
-
-            {
-                const inputEl = document.getElementById('inputC');
-                const btnVerify = document.getElementById('btnVerifyC');
-                const lockedMsg = document.getElementById('lockedC');
-                const questionEl = document.getElementById('questionC');
+                placedPairs.A2.forEach((point, index) => {
+                    drawPlacedPoint(point.x, point.y, modeColors.A2, index + 1);
+                });
                 
-                if (a2Complete) {
-                    inputEl.disabled = false;
-                    btnVerify.disabled = false;
-                    questionEl.classList.remove('locked');
-                    if (lockedMsg) lockedMsg.style.display = 'none';
+                placedPairs.B2.forEach((point, index) => {
+                    drawPlacedPoint(point.x, point.y, modeColors.B2, index + 1);
+                });
+
+                updateAllUI();
+            }
+
+            function updateAllUI() {
+                updatePlacedPairsList();
+                updateProgress();
+                checkUnlocks();
+            }
+
+            function updatePlacedPairsList() {
+                // A×B
+                const containerAB = document.getElementById('placedAB');
+                if (placedPairs.AB.length === 0) {
+                    containerAB.innerHTML = '<span class="empty-message">Nenhum par...</span>';
                 } else {
-                    inputEl.disabled = true;
-                    btnVerify.disabled = true;
-                    questionEl.classList.add('locked');
-                    if (lockedMsg) lockedMsg.style.display = 'block';
+                    containerAB.innerHTML = placedPairs.AB.map((p, i) =>
+                        `<span class="pair-tag ab">${i+1}º (${p.x},${p.y})</span>`
+                    ).join('');
+                }
+
+                // A²
+                const containerA2 = document.getElementById('placedA2');
+                if (placedPairs.A2.length === 0) {
+                    containerA2.innerHTML = '<span class="empty-message">Nenhum par...</span>';
+                } else {
+                    containerA2.innerHTML = placedPairs.A2.map((p, i) =>
+                        `<span class="pair-tag a2">${i+1}º (${p.x},${p.y})</span>`
+                    ).join('');
+                }
+
+                // B²
+                const containerB2 = document.getElementById('placedB2');
+                if (placedPairs.B2.length === 0) {
+                    containerB2.innerHTML = '<span class="empty-message">Nenhum par...</span>';
+                } else {
+                    containerB2.innerHTML = placedPairs.B2.map((p, i) =>
+                        `<span class="pair-tag b2">${i+1}º (${p.x},${p.y})</span>`
+                    ).join('');
                 }
             }
 
-            {
-                const inputEl = document.getElementById('inputD');
-                const btnVerify = document.getElementById('btnVerifyD');
-                const lockedMsg = document.getElementById('lockedD');
-                const questionEl = document.getElementById('questionD');
+            function updateProgress() {
+                const abCount = placedPairs.AB.length;
+                const a2Count = placedPairs.A2.length;
+                const b2Count = placedPairs.B2.length;
                 
-                if (b2Complete) {
-                    inputEl.disabled = false;
-                    btnVerify.disabled = false;
-                    questionEl.classList.remove('locked');
-                    if (lockedMsg) lockedMsg.style.display = 'none';
-                } else {
-                    inputEl.disabled = true;
-                    btnVerify.disabled = true;
-                    questionEl.classList.add('locked');
-                    if (lockedMsg) lockedMsg.style.display = 'block';
+                const abTotal = expectedPairs.AB.length;
+                const a2Total = expectedPairs.A2.length;
+                const b2Total = expectedPairs.B2.length;
+
+                document.getElementById('progressAB').querySelector('.progress-count').textContent = `${abCount}/${abTotal}`;
+                document.getElementById('progressA2').querySelector('.progress-count').textContent = `${a2Count}/${a2Total}`;
+                document.getElementById('progressB2').querySelector('.progress-count').textContent = `${b2Count}/${b2Total}`;
+
+                document.getElementById('progressAB').classList.toggle('complete', abCount === abTotal);
+                document.getElementById('progressA2').classList.toggle('complete', a2Count === a2Total);
+                document.getElementById('progressB2').classList.toggle('complete', b2Count === b2Total);
+            }
+
+            function checkUnlocks() {
+                const abComplete = placedPairs.AB.length === expectedPairs.AB.length;
+                const a2Complete = placedPairs.A2.length === expectedPairs.A2.length;
+                const b2Complete = placedPairs.B2.length === expectedPairs.B2.length;
+
+                // Questões A e B: desbloqueiam quando A×B completo
+                ['A', 'B'].forEach(q => {
+                    const inputEl = document.getElementById('input' + q);
+                    const btnVerify = document.getElementById('btnVerify' + q);
+                    const lockedMsg = document.getElementById('locked' + q);
+                    const questionEl = document.getElementById('question' + q);
+                    
+                    if (abComplete) {
+                        inputEl.disabled = false;
+                        btnVerify.disabled = false;
+                        questionEl.classList.remove('locked');
+                        if (lockedMsg) lockedMsg.style.display = 'none';
+                    } else {
+                        inputEl.disabled = true;
+                        btnVerify.disabled = true;
+                        questionEl.classList.add('locked');
+                        if (lockedMsg) lockedMsg.style.display = 'block';
+                    }
+                });
+
+                // Questão C: desbloqueia quando A² completo
+                {
+                    const inputEl = document.getElementById('inputC');
+                    const btnVerify = document.getElementById('btnVerifyC');
+                    const lockedMsg = document.getElementById('lockedC');
+                    const questionEl = document.getElementById('questionC');
+                    
+                    if (a2Complete) {
+                        inputEl.disabled = false;
+                        btnVerify.disabled = false;
+                        questionEl.classList.remove('locked');
+                        if (lockedMsg) lockedMsg.style.display = 'none';
+                    } else {
+                        inputEl.disabled = true;
+                        btnVerify.disabled = true;
+                        questionEl.classList.add('locked');
+                        if (lockedMsg) lockedMsg.style.display = 'block';
+                    }
+                }
+
+                // Questão D: desbloqueia quando B² completo
+                {
+                    const inputEl = document.getElementById('inputD');
+                    const btnVerify = document.getElementById('btnVerifyD');
+                    const lockedMsg = document.getElementById('lockedD');
+                    const questionEl = document.getElementById('questionD');
+                    
+                    if (b2Complete) {
+                        inputEl.disabled = false;
+                        btnVerify.disabled = false;
+                        questionEl.classList.remove('locked');
+                        if (lockedMsg) lockedMsg.style.display = 'none';
+                    } else {
+                        inputEl.disabled = true;
+                        btnVerify.disabled = true;
+                        questionEl.classList.add('locked');
+                        if (lockedMsg) lockedMsg.style.display = 'block';
+                    }
                 }
             }
-        }
 
-        // Event listeners
-        canvas.addEventListener('mousemove', function(e) {
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = WIDTH / rect.width;
-            const scaleY = HEIGHT / rect.height;
-            
-            const mouseX = (e.clientX - rect.left) * scaleX;
-            const mouseY = (e.clientY - rect.top) * scaleY;
+            // Event listeners
+            canvas.addEventListener('mousemove', function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = WIDTH / rect.width;
+                const scaleY = HEIGHT / rect.height;
+                
+                const mouseX = (e.clientX - rect.left) * scaleX;
+                const mouseY = (e.clientY - rect.top) * scaleY;
 
-            const coord = toPlaneCoord(mouseX, mouseY);
-            
-            if (coord.x >= 0 && coord.x <= 10 && coord.y >= 0 && coord.y <= 10) {
-                // Verificar se está dentro da área visível da grid
-                const px = toPixelX(coord.x);
-                const py = toPixelY(coord.y);
-                if (px >= OFFSET_X && px <= WIDTH - MARGIN_RIGHT && py >= MARGIN_TOP && py <= OFFSET_Y) {
-                    hoveredCoords = coord;
-                    canvas.style.cursor = isAlreadyPlaced(currentMode, coord.x, coord.y) ? 'pointer' : 'crosshair';
+                const coord = toPlaneCoord(mouseX, mouseY);
+                
+                if (coord.x >= 0 && coord.x <= 10 && coord.y >= 0 && coord.y <= 10) {
+                    const px = toPixelX(coord.x);
+                    const py = toPixelY(coord.y);
+                    if (px >= OFFSET_X && px <= WIDTH - MARGIN_RIGHT && py >= MARGIN_TOP && py <= OFFSET_Y) {
+                        hoveredCoords = coord;
+                        canvas.style.cursor = isAlreadyPlaced(currentMode, coord.x, coord.y) ? 'pointer' : 'crosshair';
+                    } else {
+                        hoveredCoords = null;
+                        canvas.style.cursor = 'default';
+                    }
                 } else {
                     hoveredCoords = null;
                     canvas.style.cursor = 'default';
                 }
-            } else {
-                hoveredCoords = null;
-                canvas.style.cursor = 'default';
-            }
 
-            render();
-        });
-
-        canvas.addEventListener('click', function(e) {
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = WIDTH / rect.width;
-            const scaleY = HEIGHT / rect.height;
-            
-            const mouseX = (e.clientX - rect.left) * scaleX;
-            const mouseY = (e.clientY - rect.top) * scaleY;
-
-            const coord = toPlaneCoord(mouseX, mouseY);
-            
-            if (coord.x < 0 || coord.x > 10 || coord.y < 0 || coord.y > 10) return;
-            
-            // Verificar se está dentro da área da grid
-            const px = toPixelX(coord.x);
-            const py = toPixelY(coord.y);
-            if (px < OFFSET_X || px > WIDTH - MARGIN_RIGHT || py < MARGIN_TOP || py > OFFSET_Y) return;
-
-            togglePlacedPair(currentMode, coord.x, coord.y);
-            render();
-        });
-
-        canvas.addEventListener('mouseleave', function() {
-            hoveredCoords = null;
-            render();
-        });
-
-        // Touch events
-        canvas.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-            const touch = e.touches[0];
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = WIDTH / rect.width;
-            const scaleY = HEIGHT / rect.height;
-            
-            const mouseX = (touch.clientX - rect.left) * scaleX;
-            const mouseY = (touch.clientY - rect.top) * scaleY;
-
-            const coord = toPlaneCoord(mouseX, mouseY);
-            
-            if (coord.x < 0 || coord.x > 10 || coord.y < 0 || coord.y > 10) return;
-            
-            const px = toPixelX(coord.x);
-            const py = toPixelY(coord.y);
-            if (px < OFFSET_X || px > WIDTH - MARGIN_RIGHT || py < MARGIN_TOP || py > OFFSET_Y) return;
-
-            togglePlacedPair(currentMode, coord.x, coord.y);
-            render();
-        }, { passive: false });
-
-        // Funções dos botões
-        function undoLastPoint() {
-            if (placedPairs[currentMode].length > 0) {
-                placedPairs[currentMode].pop();
                 render();
-            }
-        }
-
-        function resetAll() {
-            placedPairs = { AB: [], A2: [], B2: [] };
-            
-            ['A', 'B', 'C', 'D'].forEach(q => {
-                const inputEl = document.getElementById('input' + q);
-                const questionEl = document.getElementById('question' + q);
-                const feedbackEl = document.getElementById('feedback' + q);
-                const btnVerify = document.getElementById('btnVerify' + q);
-                const lockedMsg = document.getElementById('locked' + q);
-                
-                inputEl.value = '';
-                inputEl.disabled = true;
-                inputEl.classList.remove('correct-input', 'wrong-input');
-                btnVerify.disabled = true;
-                questionEl.classList.add('locked');
-                questionEl.classList.remove('correct', 'wrong');
-                feedbackEl.textContent = '';
-                feedbackEl.className = 'feedback-text';
-                if (lockedMsg) lockedMsg.style.display = 'block';
             });
-            
-            render();
-        }
 
-        function normalizeAnswer(input) {
-            return input
-                .replace(/\s+/g, ' ')
-                .replace(/,\s*/g, ',')
-                .replace(/\s*,/g, ',')
-                .replace(/\(\s*/g, '(')
-                .replace(/\s*\)/g, ')')
-                .replace(/{\s*/g, '{')
-                .replace(/\s*}/g, '}')
-                .trim();
-        }
+            canvas.addEventListener('click', function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = WIDTH / rect.width;
+                const scaleY = HEIGHT / rect.height;
+                
+                const mouseX = (e.clientX - rect.left) * scaleX;
+                const mouseY = (e.clientY - rect.top) * scaleY;
 
-        function verifyAnswer(question) {
-            const inputEl = document.getElementById('input' + question);
-            const questionEl = document.getElementById('question' + question);
-            const feedbackEl = document.getElementById('feedback' + question);
-            
-            const userAnswer = normalizeAnswer(inputEl.value);
-            const correctList = correctAnswers[question];
-            
-            const isCorrect = correctList.some(answer => normalizeAnswer(answer) === userAnswer);
+                const coord = toPlaneCoord(mouseX, mouseY);
+                
+                if (coord.x < 0 || coord.x > 10 || coord.y < 0 || coord.y > 10) return;
+                
+                const px = toPixelX(coord.x);
+                const py = toPixelY(coord.y);
+                if (px < OFFSET_X || px > WIDTH - MARGIN_RIGHT || py < MARGIN_TOP || py > OFFSET_Y) return;
 
-            if (isCorrect) {
+                const result = tryAddPair(currentMode, coord.x, coord.y);
+                const feedbackBox = document.getElementById('feedbackBox');
+
+                if (result === 'correct') {
+                    feedbackBox.className = 'feedback-box success';
+                    feedbackBox.innerHTML = `✅ <strong>Certo!</strong> (${coord.x},${coord.y}) pertence a ${modeColors[currentMode].label}!`;
+                } else if (result === 'already_placed') {
+                    feedbackBox.className = 'feedback-box';
+                    feedbackBox.innerHTML = `⚠️ (${coord.x},${coord.y}) já foi localizado!`;
+                } else {
+                    feedbackBox.className = 'feedback-box error';
+                    feedbackBox.innerHTML = `❌ (${coord.x},${coord.y}) <strong>NÃO</strong> pertence a ${modeColors[currentMode].label}!`;
+                }
+
+                // Resetar feedback após alguns segundos
+                setTimeout(() => {
+                    const total = expectedPairs[currentMode].length;
+                    const count = placedPairs[currentMode].length;
+                    if (count < total) {
+                        feedbackBox.className = 'feedback-box';
+                        feedbackBox.innerHTML = `🎯 Continue! Faltam <strong>${total - count}</strong> pares em ${modeColors[currentMode].label}.`;
+                    }
+                }, 2500);
+
+                render();
+            });
+
+            canvas.addEventListener('mouseleave', function() {
+                hoveredCoords = null;
+                render();
+            });
+
+            // Touch events
+            canvas.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = WIDTH / rect.width;
+                const scaleY = HEIGHT / rect.height;
+                
+                const mouseX = (touch.clientX - rect.left) * scaleX;
+                const mouseY = (touch.clientY - rect.top) * scaleY;
+
+                const coord = toPlaneCoord(mouseX, mouseY);
+                
+                if (coord.x < 0 || coord.x > 10 || coord.y < 0 || coord.y > 10) return;
+                
+                const px = toPixelX(coord.x);
+                const py = toPixelY(coord.y);
+                if (px < OFFSET_X || px > WIDTH - MARGIN_RIGHT || py < MARGIN_TOP || py > OFFSET_Y) return;
+
+                const result = tryAddPair(currentMode, coord.x, coord.y);
+                const feedbackBox = document.getElementById('feedbackBox');
+
+                if (result === 'correct') {
+                    feedbackBox.className = 'feedback-box success';
+                    feedbackBox.innerHTML = `✅ <strong>Certo!</strong> (${coord.x},${coord.y}) pertence a ${modeColors[currentMode].label}!`;
+                } else if (result === 'already_placed') {
+                    feedbackBox.className = 'feedback-box';
+                    feedbackBox.innerHTML = `⚠️ (${coord.x},${coord.y}) já foi localizado!`;
+                } else {
+                    feedbackBox.className = 'feedback-box error';
+                    feedbackBox.innerHTML = `❌ (${coord.x},${coord.y}) <strong>NÃO</strong> pertence a ${modeColors[currentMode].label}!`;
+                }
+
+                setTimeout(() => {
+                    const total = expectedPairs[currentMode].length;
+                    const count = placedPairs[currentMode].length;
+                    if (count < total) {
+                        feedbackBox.className = 'feedback-box';
+                        feedbackBox.innerHTML = `🎯 Continue! Faltam <strong>${total - count}</strong> pares em ${modeColors[currentMode].label}.`;
+                    }
+                }, 2500);
+
+                render();
+            }, { passive: false });
+
+            // Funções globais
+            window.undoLastPoint = function() {
+                if (placedPairs[currentMode].length > 0) {
+                    placedPairs[currentMode].pop();
+                    render();
+                }
+            };
+
+            window.resetAll = function() {
+                placedPairs = { AB: [], A2: [], B2: [] };
+                wrongAttempts = [];
+                
+                ['A', 'B', 'C', 'D'].forEach(q => {
+                    const inputEl = document.getElementById('input' + q);
+                    const questionEl = document.getElementById('question' + q);
+                    const feedbackEl = document.getElementById('feedback' + q);
+                    const btnVerify = document.getElementById('btnVerify' + q);
+                    const lockedMsg = document.getElementById('locked' + q);
+                    
+                    inputEl.value = '';
+                    inputEl.disabled = true;
+                    inputEl.classList.remove('correct-input', 'wrong-input');
+                    btnVerify.disabled = true;
+                    questionEl.classList.add('locked');
+                    questionEl.classList.remove('correct', 'wrong');
+                    feedbackEl.textContent = '';
+                    feedbackEl.className = 'feedback-text';
+                    if (lockedMsg) lockedMsg.style.display = 'block';
+                });
+                
+                document.getElementById('feedbackBox').className = 'feedback-box';
+                document.getElementById('feedbackBox').innerHTML = '🎯 Clique no plano para encontrar os pares!';
+                
+                render();
+            };
+
+            window.setMode = setMode;
+
+            function normalizeAnswer(input) {
+                return input.replace(/\s+/g, ' ').replace(/,\s*/g, ',').replace(/\s*,/g, ',').replace(/\(\s*/g, '(').replace(/\s*\)/g, ')').replace(/{\s*/g, '{').replace(/\s*}/g, '}').trim();
+            }
+
+            window.verifyAnswer = function(question) {
+                const inputEl = document.getElementById('input' + question);
+                const questionEl = document.getElementById('question' + question);
+                const feedbackEl = document.getElementById('feedback' + question);
+                
+                const userAnswer = normalizeAnswer(inputEl.value);
+                const correctList = correctAnswers[question];
+                const isCorrect = correctList.some(answer => normalizeAnswer(answer) === userAnswer);
+
+                if (isCorrect) {
+                    inputEl.classList.add('correct-input');
+                    inputEl.classList.remove('wrong-input');
+                    questionEl.classList.add('correct');
+                    questionEl.classList.remove('wrong');
+                    feedbackEl.textContent = '✅ Correto! Muito bem!';
+                    feedbackEl.className = 'feedback-text correct';
+                } else {
+                    inputEl.classList.add('wrong-input');
+                    inputEl.classList.remove('correct-input');
+                    questionEl.classList.add('wrong');
+                    questionEl.classList.remove('correct');
+                    feedbackEl.textContent = '❌ Incorreto. Revise os pares que você localizou.';
+                    feedbackEl.className = 'feedback-text wrong';
+                }
+            };
+
+            window.showAnswer = function(question) {
+                const inputEl = document.getElementById('input' + question);
+                const feedbackEl = document.getElementById('feedback' + question);
+                const questionEl = document.getElementById('question' + question);
+                
+                inputEl.value = correctAnswers[question][0];
                 inputEl.classList.add('correct-input');
                 inputEl.classList.remove('wrong-input');
                 questionEl.classList.add('correct');
                 questionEl.classList.remove('wrong');
-                feedbackEl.textContent = '✅ Correto! Muito bem!';
+                feedbackEl.textContent = '💡 Esta é a resposta correta.';
                 feedbackEl.className = 'feedback-text correct';
-            } else {
-                inputEl.classList.add('wrong-input');
-                inputEl.classList.remove('correct-input');
-                questionEl.classList.add('wrong');
-                questionEl.classList.remove('correct');
-                feedbackEl.textContent = '❌ Incorreto. Revise os pares que você localizou.';
-                feedbackEl.className = 'feedback-text wrong';
-            }
-        }
+            };
 
-        function showAnswer(question) {
-            const inputEl = document.getElementById('input' + question);
-            const feedbackEl = document.getElementById('feedback' + question);
-            const questionEl = document.getElementById('question' + question);
-            
-            inputEl.value = correctAnswers[question][0];
-            inputEl.classList.add('correct-input');
-            inputEl.classList.remove('wrong-input');
-            questionEl.classList.add('correct');
-            questionEl.classList.remove('wrong');
-            feedbackEl.textContent = '💡 Esta é a resposta correta.';
-            feedbackEl.className = 'feedback-text correct';
-        }
-
-        // Inicializar
-        setMode('AB');
-        render();
+            // Inicializar
+            setMode('AB');
+        })();
     </script>
 </body>
 </html>
